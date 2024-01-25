@@ -1,0 +1,19 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.2.5
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: kriyanshishah06@gmail.com
+author_name: Kriyanshi Shah
+data_format: string
+file_extension: ''
+has_binder: false
+has_settings: false
+kind: frontend
+labextension_name: jupyterlab_sandbox
+mimetype: ''
+mimetype_name: ''
+project_short_description: A JupyterLab extension to enable iframes in jupyterlab.
+python_name: jupyterlab_sandbox
+repository: https://github.com/kriyanshishah/jupyterlab_sandbox
+test: true
+viewer_name: ''
+

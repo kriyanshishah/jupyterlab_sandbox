@@ -1,7 +1,7 @@
 import {
   ILayoutRestorer,
-  JupyterLab,
-  JupyterLabPlugin
+  JupyterFrontEnd,
+  JupyterFrontEndPlugin
 } from '@jupyterlab/application'
 
 import {
@@ -9,25 +9,36 @@ import {
   IFrame,
   showDialog,
   Dialog,
-  IInstanceTracker,
-  InstanceTracker
+  IWidgetTracker,
+  WidgetTracker,
+  ToolbarButton
 } from '@jupyterlab/apputils'
+
+import { DocumentRegistry } from '@jupyterlab/docregistry'
+
+import { NotebookPanel, INotebookModel } from '@jupyterlab/notebook'
+
+import { buildIcon } from '@jupyterlab/ui-components'
+
+import { CommandRegistry } from  '@lumino/commands'
+
+import { IDisposable } from '@lumino/disposable'
 
 import {
   Token,
-} from '@phosphor/coreutils';
+} from '@lumino/coreutils';
 
 import {
   Widget,
   Panel
-} from '@phosphor/widgets';
+} from '@lumino/widgets';
 
 
 // import '../style/index.css';
 
 
 export class Sandbox extends Panel {
-  private _sandBox: SandboxNS.TSandboxOptions
+  private _sandBox!: SandboxNS.TSandboxOptions
   private _frame: IFrame
 
   constructor() {
@@ -50,7 +61,7 @@ export class Sandbox extends Panel {
 
   set sandBox(attrs: SandboxNS.TSandboxOptions) {
     this._sandBox = attrs
-    this.iframeNode.setAttribute('sandbox', this.sandboxAttr)
+    this.iframeNode?.setAttribute('sandbox', this.sandboxAttr)
   }
 
   get url() {
@@ -137,11 +148,30 @@ namespace CommandIDs {
   export const restore = 'sandbox:restore'
 }
 
+class ButtonRender implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel>{
+  constructor(commands: CommandRegistry){
+    this._commands = commands;
+  }
+
+  createNew(panel: NotebookPanel): IDisposable {
+    const button = new ToolbarButton({
+      className: 'renderButton',
+      tooltip: "Render Iframe",
+      icon: buildIcon,
+      onClick: () => {
+        this._commands.execute(CommandIDs.create)
+      }
+    });
+    panel.toolbar.insertAfter('cellType', 'voilaRender', button);
+    return button
+  }
+  private _commands: CommandRegistry;
+}
 
 /**
  * A class that tracks sandbox widgets.
  */
-export interface ISandboxTracker extends IInstanceTracker<Sandbox>{}
+export interface ISandboxTracker extends IWidgetTracker<Sandbox>{}
 
 
 /**
@@ -150,18 +180,20 @@ export interface ISandboxTracker extends IInstanceTracker<Sandbox>{}
 export const ISandboxTracker = new Token<ISandboxTracker>('jupyterlab_sandbox:ISandboxTracker');
 
 
-const extension: JupyterLabPlugin<ISandboxTracker> = {
+const extension: JupyterFrontEndPlugin<ISandboxTracker> = {
   id: 'jupyterlab_sandbox',
   autoStart: true,
   requires: [ICommandPalette, ILayoutRestorer],
   provides: ISandboxTracker,
-  activate: (app: JupyterLab, palette: ICommandPalette, restorer: ILayoutRestorer) => {
-    const tracker = new InstanceTracker<Sandbox>({ namespace: Private.namespace })
+  activate: (app: JupyterFrontEnd, palette: ICommandPalette, restorer: ILayoutRestorer) : WidgetTracker<Sandbox> => {
+    const tracker = new WidgetTracker<Sandbox>({ namespace: Private.namespace })
+
+    const { commands, docRegistry}  = app
 
     // Handle state restoration.
     restorer.restore(tracker, {
       command: CommandIDs.restore,
-      args: (widget) => ({url: widget.url, sandbox: widget.sandbox}),
+      args: (widget) => ({url: widget.url, sandbox: widget.sandBox}),
       name: () => Private.namespace
     });
 
@@ -173,7 +205,7 @@ const extension: JupyterLabPlugin<ISandboxTracker> = {
         // const options = args['sandbox'] as Sandbox.TSandboxOptions
         let frame = Private.createSandbox(url, SandboxNS.DEFAULT_SANDBOX)
         tracker.add(frame)
-        app.shell.addToMainArea(frame)
+        app.shell.add(frame)
       }
     })
 
@@ -191,12 +223,14 @@ const extension: JupyterLabPlugin<ISandboxTracker> = {
           }
           let frame = Private.createSandbox(result.value, SandboxNS.DEFAULT_SANDBOX)
           tracker.add(frame)
-          app.shell.addToMainArea(frame)
+          app.shell.add(frame)
           return Promise.resolve()
         })
       }
     })
     palette.addItem({ command: CommandIDs.create, category: 'Sandbox' });
+    const renderButton = new ButtonRender(commands)
+    docRegistry.addWidgetExtension('Notebook', renderButton)
     return tracker
   }
 };
