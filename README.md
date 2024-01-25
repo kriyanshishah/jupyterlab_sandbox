@@ -3,6 +3,7 @@
 [![Github Actions Status](https://github.com/kriyanshishah/jupyterlab_sandbox/workflows/Build/badge.svg)](https://github.com/kriyanshishah/jupyterlab_sandbox/actions/workflows/build.yml)
 A JupyterLab extension to enable iframes in jupyterlab.
 
+![state example](preview.gif)
 ## Requirements
 
 - JupyterLab >= 4.0.0
